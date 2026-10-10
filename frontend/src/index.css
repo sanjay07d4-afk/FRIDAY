@@ -1,0 +1,76 @@
+:root {
+  --bg-primary: #000000;
+  --accent-orange: #D84B10;
+  --accent-orange-rgb: 216, 75, 16;
+  
+  /* Subtle holographic transparency tokens */
+  --accent-alpha-min: rgba(var(--accent-orange-rgb), 0.08);
+  --accent-alpha-subtle: rgba(var(--accent-orange-rgb), 0.18);
+  --accent-alpha-mid: rgba(var(--accent-orange-rgb), 0.38);
+  --accent-alpha-active: rgba(var(--accent-orange-rgb), 0.78);
+
+  /* HUD Panel Surfaces */
+  --hud-surface: rgba(4, 4, 4, 0.82);
+  --hud-surface-solid: #050505;
+  --hud-border: rgba(var(--accent-orange-rgb), 0.22);
+  --hud-border-hover: rgba(var(--accent-orange-rgb), 0.45);
+  --hud-text-muted: rgba(255, 255, 255, 0.45);
+  --hud-text-dim: rgba(255, 255, 255, 0.25);
+  --hud-text-bright: rgba(255, 255, 255, 0.88);
+  --hud-text-accent: rgba(var(--accent-orange-rgb), 0.9);
+
+  /* Fonts */
+  --font-mono: 'JetBrains Mono', monospace, ui-monospace;
+  --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  background-color: var(--bg-primary);
+  color: var(--hud-text-muted);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  background-color: #000000;
+}
+
+/* Subtle holographic scanline & grain overlay (extremely subtle, cinematic) */
+.hologram-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.8) 100%);
+}
+
+/* Minimalist scrollbars if ever needed */
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-alpha-subtle);
+  border-radius: 2px;
+}

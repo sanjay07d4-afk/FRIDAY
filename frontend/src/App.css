@@ -1,0 +1,582 @@
+/* FRIDAY AI Interface — Futuristic Minimal HUD Styling */
+
+.friday-root-viewport {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background-color: #000000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Central Network Canvas wrapper */
+.central-network-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.central-network-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Dynamic Floating Task HUD Windows */
+.floating-task-hud {
+  position: absolute;
+  z-index: 20;
+  background: rgba(4, 4, 4, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(216, 75, 16, 0.28);
+  border-radius: 4px;
+  padding: 10px 14px;
+  min-width: 190px;
+  max-width: 240px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(216, 75, 16, 0.08);
+  animation: hudEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.floating-task-hud:hover {
+  border-color: rgba(216, 75, 16, 0.55);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.9), 0 0 20px rgba(216, 75, 16, 0.15);
+}
+
+@keyframes hudEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Holographic corner tick marks */
+.hud-corner {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-color: rgba(216, 75, 16, 0.8);
+  pointer-events: none;
+}
+.hud-corner.top-left {
+  top: -1px;
+  left: -1px;
+  border-top: 1.5px solid rgba(216, 75, 16, 0.8);
+  border-left: 1.5px solid rgba(216, 75, 16, 0.8);
+}
+.hud-corner.bottom-right {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1.5px solid rgba(216, 75, 16, 0.8);
+  border-right: 1.5px solid rgba(216, 75, 16, 0.8);
+}
+
+/* Dismiss button */
+.hud-dismiss-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.4;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.hud-dismiss-btn:hover {
+  opacity: 0.95;
+  transform: scale(1.15);
+}
+
+/* Orbital Desktop Slot Positioning (Leaves central sphere unobstructed) */
+.floating-task-hud.slot-0 {
+  top: 15%;
+  left: 8%;
+}
+.floating-task-hud.slot-1 {
+  top: 48%;
+  left: 6%;
+}
+.floating-task-hud.slot-2 {
+  top: 76%;
+  left: 8%;
+}
+.floating-task-hud.slot-3 {
+  top: 15%;
+  right: 8%;
+}
+.floating-task-hud.slot-4 {
+  top: 48%;
+  right: 6%;
+}
+.floating-task-hud.slot-5 {
+  top: 76%;
+  right: 8%;
+}
+
+/* Task Visual Outputs */
+.hud-content {
+  display: flex;
+  align-items: center;
+}
+
+.primary-metric {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.secondary-metric {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(216, 75, 16, 0.85);
+  letter-spacing: 0.8px;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+/* Weather Visual */
+.task-weather-visual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.weather-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Timer Visual */
+.task-timer-visual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.timer-ring-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.timer-svg {
+  filter: drop-shadow(0 0 3px rgba(216, 75, 16, 0.35));
+}
+
+/* Status Visual */
+.task-status-visual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-bars-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.status-meter-segments {
+  display: flex;
+  gap: 2px;
+}
+.meter-bar {
+  width: 4px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 1px;
+}
+.meter-bar.active {
+  background: rgba(216, 75, 16, 0.9);
+  box-shadow: 0 0 4px rgba(216, 75, 16, 0.45);
+}
+.status-dot-pulse {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(216, 75, 16, 0.95);
+  animation: statusPulse 1.8s infinite ease-in-out;
+}
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* Comms Spectrum Visual */
+.task-comms-visual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.comms-spectrum-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 18px;
+}
+.spectrum-bar {
+  width: 2.5px;
+  background: rgba(216, 75, 16, 0.88);
+  border-radius: 1px;
+  transform-origin: bottom;
+  animation: spectrumBounce 1.2s infinite ease-in-out alternate;
+}
+@keyframes spectrumBounce {
+  0% {
+    transform: scaleY(0.3);
+  }
+  100% {
+    transform: scaleY(1.0);
+  }
+}
+
+/* Simulation Controls Drawer (Collapsible & Non-intrusive) */
+.demo-hud-controller {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.hud-pill-toggle {
+  background: rgba(8, 8, 8, 0.75);
+  border: 1px solid rgba(216, 75, 16, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(216, 75, 16, 0.8);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.hud-pill-toggle:hover {
+  background: rgba(14, 14, 14, 0.9);
+  border-color: rgba(216, 75, 16, 0.6);
+  color: rgba(216, 75, 16, 0.98);
+}
+
+.hud-pill-indicator {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #D84B10;
+  box-shadow: 0 0 4px #D84B10;
+}
+
+.hud-panel-drawer {
+  margin-bottom: 10px;
+  background: rgba(6, 6, 6, 0.94);
+  border: 1px solid rgba(216, 75, 16, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(216, 75, 16, 0.1);
+  animation: hudDrawerIn 0.25s ease-out forwards;
+}
+
+@keyframes hudDrawerIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hud-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hud-group-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 1px;
+}
+
+.hud-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hud-action-chip {
+  background: rgba(20, 20, 20, 0.7);
+  border: 1px solid rgba(216, 75, 16, 0.22);
+  color: rgba(255, 255, 255, 0.65);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.8px;
+  padding: 4px 9px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hud-action-chip:hover {
+  background: rgba(35, 35, 35, 0.85);
+  border-color: rgba(216, 75, 16, 0.55);
+  color: #ffffff;
+}
+
+.hud-action-chip.active {
+  background: rgba(216, 75, 16, 0.2);
+  border-color: rgba(216, 75, 16, 0.8);
+  color: #D84B10;
+  box-shadow: 0 0 8px rgba(216, 75, 16, 0.25);
+}
+
+.hud-action-chip.highlight {
+  border-color: rgba(216, 75, 16, 0.6);
+  color: #D84B10;
+}
+
+.hud-hotkeys-hint {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.5px;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 6px;
+}
+
+/* ========================================================
+   RESPONSIVE DESIGN (Windows Laptop / Desktop vs Mobile Android)
+   ======================================================== */
+
+@media (max-width: 768px) {
+  /* On Mobile Screens: Keep Central Network 100% visible, scale floating popups */
+  .floating-task-hud {
+    min-width: 150px;
+    max-width: 175px;
+    padding: 7px 10px;
+  }
+
+  .primary-metric {
+    font-size: 14px;
+  }
+
+  .secondary-metric {
+    font-size: 8.5px;
+  }
+
+  /* Reposition mobile slots to perimeter margins without overlapping center globe */
+  .floating-task-hud.slot-0 {
+    top: 5%;
+    left: 4%;
+    right: auto;
+    bottom: auto;
+  }
+  .floating-task-hud.slot-3 {
+    top: 5%;
+    right: 4%;
+    left: auto;
+    bottom: auto;
+  }
+  .floating-task-hud.slot-1 {
+    top: auto;
+    bottom: 12%;
+    left: 4%;
+    right: auto;
+  }
+  .floating-task-hud.slot-4 {
+    top: auto;
+    bottom: 12%;
+    right: 4%;
+    left: auto;
+  }
+  .floating-task-hud.slot-2 {
+    top: auto;
+    bottom: 22%;
+    left: 4%;
+    right: auto;
+  }
+  .floating-task-hud.slot-5 {
+    top: auto;
+    bottom: 22%;
+    right: 4%;
+    left: auto;
+  }
+
+  .demo-hud-controller {
+    bottom: 8px;
+  }
+
+  .hud-panel-drawer {
+    width: 90vw;
+    padding: 10px;
+  }
+}
+
+/* ========================================================
+   HAND GESTURE CONTROL & HOLOGRAPHIC RETICLE STYLES
+   ======================================================== */
+
+.floating-task-hud.grabbed {
+  border-color: rgba(216, 75, 16, 0.9) !important;
+  box-shadow: 0 0 24px rgba(216, 75, 16, 0.45), 0 16px 48px rgba(0, 0, 0, 0.98) !important;
+  cursor: grabbing;
+}
+
+.floating-task-hud.selected {
+  border-color: rgba(216, 75, 16, 0.65);
+  box-shadow: 0 0 16px rgba(216, 75, 16, 0.25);
+}
+
+.hand-cursor-overlay-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.two-hand-connector-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hand-reticle {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin-left: -16px;
+  margin-top: -16px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.03s linear;
+}
+
+.reticle-ring {
+  width: 24px;
+  height: 24px;
+  border: 1.2px solid rgba(216, 75, 16, 0.55);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(216, 75, 16, 0.25);
+  transition: all 0.15s ease-out;
+}
+
+.reticle-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(216, 75, 16, 0.95);
+  box-shadow: 0 0 4px rgba(216, 75, 16, 0.7);
+}
+
+.hand-reticle.pinching .reticle-ring {
+  width: 14px;
+  height: 14px;
+  border-color: rgba(216, 75, 16, 0.98);
+  box-shadow: 0 0 12px rgba(216, 75, 16, 0.55);
+}
+
+.reticle-pulse {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(216, 75, 16, 0.85);
+  border-radius: 50%;
+  animation: reticlePulseWave 0.6s infinite ease-out;
+}
+
+@keyframes reticlePulseWave {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.hud-pill-indicator.cam-active {
+  background: #D84B10;
+  box-shadow: 0 0 8px #D84B10;
+  animation: camPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes camPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+.hud-status-badge {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.8px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hud-status-badge.active {
+  background: rgba(216, 75, 16, 0.18);
+  border: 1px solid rgba(216, 75, 16, 0.5);
+  color: #D84B10;
+}
+
+.hud-status-badge.error {
+  background: rgba(255, 50, 50, 0.15);
+  border: 1px solid rgba(255, 50, 50, 0.35);
+  color: rgba(255, 120, 120, 0.85);
+}
+

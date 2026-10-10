@@ -1,0 +1,50 @@
+# FRIDAY AI — Backend Implementation Plan & Verification Checklist
+
+## Architectural Verification Checklist
+
+- [x] **1. Root Isolated Backend Folder**: All backend implementation files strictly contained in `backend/`.
+- [x] **2. Technology Stack**: Python 3.13 + FastAPI + SQLAlchemy Async + SQLite/aiosqlite + APScheduler + Pydantic v2.
+- [x] **3. Core AI Orchestrator**:
+  - [x] Natural language intent analysis.
+  - [x] Entity extraction.
+  - [x] Multi-step task decomposition and planning.
+  - [x] Ambiguity detection with clarification questions.
+  - [x] Parallel task planning for independent instructions.
+  - [x] Pluggable external providers (OpenAI / Gemini) + deterministic local execution engine.
+- [x] **4. Task Execution Engine**:
+  - [x] Bounded concurrency with async Semaphore (`MAX_CONCURRENT_TASKS`).
+  - [x] Task statuses (`queued`, `running`, `completed`, `failed`, `cancelled`, `awaiting_confirmation`).
+  - [x] Timeout handling and cancellation.
+  - [x] Real-time event publishing and subscriber hooks.
+- [x] **5. Persistent Scheduler & Reminders**:
+  - [x] Timezone-aware execution defaulting to `Asia/Kolkata`.
+  - [x] Database-backed persistence that survives server restarts.
+  - [x] One-time date triggers & recurring cron triggers.
+- [x] **6. Personal Memory System**:
+  - [x] Persistent storage across sessions with SQLite.
+  - [x] Categorization: facts, preferences, instructions, summaries.
+  - [x] Keyword search, update, export, and soft/hard deletion.
+  - [x] Privacy filter: automatic rejection of passwords, PINs, and credit card credentials.
+- [x] **7. WhatsApp & Messaging Automation Policy**:
+  - [x] **Strict Policy**: NEVER automatically reply to saved contacts.
+  - [x] Unsaved numbers policy evaluation with explicit rule overrides.
+  - [x] Default-deny fail-safe for unknown contact identities.
+  - [x] Rate limiting per recipient and full audit logging.
+- [x] **8. Phone Call Management**:
+  - [x] Contact resolution matching spoken names against address book.
+  - [x] Ambiguous name resolution rejection with candidate lists.
+  - [x] Android platform boundary contracts (requires companion confirmation).
+- [x] **9. Voice Assistant & Speaker Verification**:
+  - [x] STT & TTS provider abstractions.
+  - [x] Biometric speaker enrollment and acoustic feature verification.
+  - [x] Anti-replay nonce protection and confidence threshold checks.
+  - [x] Voice conversation state machine (`idle`, `listening`, `processing`, `speaking`, `interrupted`).
+- [x] **10. Emergency Stop System**:
+  - [x] Global thread-safe kill-switch.
+  - [x] Immediate cancellation of running tasks and blocking of all outbound communications.
+- [x] **11. Frontend Integration**:
+  - [x] RESTful API endpoints at `/api/v1/*`.
+  - [x] WebSocket streaming endpoint at `/ws/tasks`.
+  - [x] Non-intrusive client with zero frontend UI disruption.
+- [x] **12. Automated Testing**:
+  - [x] 100% passing test suite across core security policies, memory, tasks, scheduler, and emergency stop.
