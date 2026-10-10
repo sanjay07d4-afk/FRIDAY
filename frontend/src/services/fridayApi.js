@@ -4,6 +4,9 @@ const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 // Clean REST API Base URL
 export const API_BASE_URL = `${rawBaseUrl}/api/v1`;
 
+// API authentication key (configurable via VITE_API_KEY)
+export const API_KEY = import.meta.env.VITE_API_KEY || 'friday-dev-secret-key';
+
 // Clean WebSocket Base URL with automatic wss:// / ws:// upgrade
 export const WS_BASE_URL = `${rawBaseUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')}/ws/tasks`;
 
@@ -29,7 +32,7 @@ export class FridayApiClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': 'friday-dev-secret-key'
+          'X-API-Key': API_KEY
         },
         body: JSON.stringify({
           command: commandText,
@@ -48,7 +51,7 @@ export class FridayApiClient {
   static async fetchTasks() {
     try {
       const res = await fetch(`${API_BASE_URL}/tasks`, {
-        headers: { 'X-API-Key': 'friday-dev-secret-key' }
+        headers: { 'X-API-Key': API_KEY }
       });
       if (!res.ok) return [];
       return await res.json();
@@ -63,7 +66,7 @@ export class FridayApiClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': 'friday-dev-secret-key'
+          'X-API-Key': API_KEY
         },
         body: JSON.stringify({ type, title, payload })
       });

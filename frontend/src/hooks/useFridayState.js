@@ -123,8 +123,10 @@ export function useFridayState() {
     micPermission,
     lastTranscript,
     voiceError,
+    isVoiceModeActive,
     startListening,
     stopListening,
+    toggleListening,
     speakResponse,
     executeCommand
   } = useVoiceAssistant({
@@ -200,19 +202,10 @@ export function useFridayState() {
     });
   }, []);
 
-  // Handle click on the central interactive globe
+  // Handle click on the central interactive globe: toggles continuous listening mode
   const handleGlobeClick = useCallback(() => {
-    if (aiState === 'listening') {
-      stopListening();
-    } else if (aiState === 'idle') {
-      startListening();
-    } else {
-      // Cycle through states
-      const currentIndex = AI_STATES.indexOf(aiState);
-      const nextIndex = (currentIndex + 1) % AI_STATES.length;
-      setAiState(AI_STATES[nextIndex]);
-    }
-  }, [aiState, startListening, stopListening]);
+    toggleListening();
+  }, [toggleListening]);
 
   // Preset demo scenario
   const runSimulatedScenario = useCallback(async () => {
@@ -287,11 +280,7 @@ export function useFridayState() {
       const key = e.key.toLowerCase();
       if (key === ' ' || key === 'v') {
         e.preventDefault();
-        if (aiState === 'listening') {
-          stopListening();
-        } else {
-          startListening();
-        }
+        toggleListening();
       } else if (key === 'i') {
         stopListening();
         setAiState('idle');
@@ -324,7 +313,7 @@ export function useFridayState() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [aiState, startListening, stopListening, toggleTask, clearAllTasks, spawnTask, runSimulatedScenario]);
+  }, [toggleListening, startListening, stopListening, toggleTask, clearAllTasks, spawnTask, runSimulatedScenario]);
 
   return {
     aiState,
@@ -349,7 +338,9 @@ export function useFridayState() {
     micPermission,
     lastTranscript,
     voiceError,
+    isVoiceModeActive,
     startListening,
-    stopListening
+    stopListening,
+    toggleListening
   };
 }

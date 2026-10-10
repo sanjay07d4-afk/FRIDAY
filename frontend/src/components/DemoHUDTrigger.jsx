@@ -11,6 +11,7 @@ export default function DemoHUDTrigger({
   errorMessage = null,
   onToggleCamera,
   micPermission = 'prompt',
+  isVoiceModeActive = false,
   onToggleVoice
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,6 +31,17 @@ export default function DemoHUDTrigger({
     }
   };
 
+  const getVoiceLabel = () => {
+    if (isVoiceModeActive || aiState === 'listening') {
+      return 'VOICE ACTIVE [STOP]';
+    } else if (aiState === 'processing') {
+      return 'PROCESSING...';
+    } else if (aiState === 'speaking') {
+      return 'SPEAKING... [STOP]';
+    }
+    return 'VOICE SESSION [SPACE / V]';
+  };
+
   return (
     <aside
       className={`demo-hud-controller ${isOpen ? 'expanded' : 'collapsed'}`}
@@ -42,10 +54,12 @@ export default function DemoHUDTrigger({
         onClick={() => setIsOpen((prev) => !prev)}
         title="Toggle Simulation Control"
       >
-        <span className={`hud-pill-indicator ${cameraState === 'active' ? 'cam-active' : ''}`} />
+        <span className={`hud-pill-indicator ${cameraState === 'active' || isVoiceModeActive ? 'cam-active' : ''}`} />
         <span className="hud-pill-label">
           {isOpen
             ? 'CLOSE SIM'
+            : isVoiceModeActive
+            ? `FRIDAY :: ${aiState.toUpperCase()} [VOICE ON]`
             : cameraState === 'active'
             ? `FRIDAY :: ${aiState.toUpperCase()} [GESTURES ON]`
             : `FRIDAY :: ${aiState.toUpperCase()}`}
@@ -60,12 +74,15 @@ export default function DemoHUDTrigger({
             <span className="hud-group-label">VOICE INTERACTION</span>
             <div className="hud-btn-row">
               <button
-                className={`hud-action-chip ${aiState === 'listening' ? 'active highlight' : ''}`}
+                className={`hud-action-chip ${isVoiceModeActive || aiState === 'listening' ? 'active highlight' : ''}`}
                 onClick={onToggleVoice}
-                title="Click or press SPACE to speak command to FRIDAY"
+                title="Continuous session: click once to start, speak multiple commands consecutively"
               >
-                {aiState === 'listening' ? 'LISTENING... (STOP)' : 'VOICE INPUT [SPACE / V]'}
+                {getVoiceLabel()}
               </button>
+              {isVoiceModeActive && (
+                <span className="hud-status-badge active">AUTO-LISTENING</span>
+              )}
               {micPermission === 'denied' && (
                 <span className="hud-status-badge error">MIC DENIED</span>
               )}

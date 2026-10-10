@@ -11,13 +11,222 @@ export function useVoiceAssistant({
   const [micPermission, setMicPermission] = useState('prompt'); // 'prompt' | 'granted' | 'denied' | 'unsupported'
   const [lastTranscript, setLastTranscript] = useState('');
   const [voiceError, setVoiceError] = useState(null);
+  const [isVoiceModeActive, setIsVoiceModeActive] = useState(false);
 
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
   const isProcessingRef = useRef(false);
-  const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
+  const isSpeakingRef = useRef(false);
+  const isVoiceModeActiveRef = useRef(false);
   const currentUtteranceRef = useRef(null);
-  const restartTimerRef = useRef(null);
+  const resumeTimerRef = useRef(null);
+  const ttsWatchdogRef = useRef(null);
+  const hasDispatchedCurrentUtteranceRef = useRef(false);
+
+  // Sync ref with state
+  useEffect(() => {
+    isVoiceModeActiveRef.current = isVoiceModeActive;
+  }, [isVoiceModeActive]);
+
+  // Cleanly abort / pause speech recognition without triggering error cascade
+  const safePauseRecognition = useCallback(() => {
+    isListeningRef.current = false;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+    }
+  }, []);
+
+  // Safe restart of speech recognition during active continuous session
+  const safeResumeListening = useCallback(() => {
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+
+    if (!isVoiceModeActiveRef.current || isSpeakingRef.current || isProcessingRef.current) {
+      return;
+    }
+
+    resumeTimerRef.current = setTimeout(() => {
+      if (!isVoiceModeActiveRef.current || isSpeakingRef.current || isProcessingRef.current) {
+        return;
+      }
+
+      if (!recognitionRef.current) return;
+
+      try {
+        hasDispatchedCurrentUtteranceRef.current = false;
+        recognitionRef.current.start();
+        isListeningRef.current = true;
+        setAiState('listening');
+      } catch (err) {
+        // If already started, mark listening state
+        if (err.name === 'InvalidStateError') {
+          isListeningRef.current = true;
+          setAiState('listening');
+        } else {
+          console.warn('[FRIDAY Voice] Safe resume recognition notice:', err.message);
+        }
+      }
+    }, 280); // 280ms acoustic buffer to prevent microphone from hearing residual speaker reverberation
+  }, [setAiState]);
+
+  // Audible speech synthesis with safety watchdog
+  const speakResponse = useCallback(
+    (textToSpeak, onComplete) => {
+      if (typeof window === 'undefined' || !window.speechSynthesis || !textToSpeak) {
+        isSpeakingRef.current = false;
+        if (isVoiceModeActiveRef.current) {
+          safeResumeListening();
+        } else {
+          setAiState('idle');
+        }
+        if (onComplete) onComplete();
+        return;
+      }
+
+      // 1. Immediately pause microphone recognition so FRIDAY never hears its own voice
+      safePauseRecognition();
+      isSpeakingRef.current = true;
+      setAiState('speaking');
+
+      try {
+        window.speechSynthesis.cancel(); // Clear any previous speech queue
+
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        currentUtteranceRef.current = utterance;
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Select suitable English voice
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice =
+          voices.find(
+            (v) =>
+              v.lang.startsWith('en') &&
+              (v.name.includes('Natural') ||
+                v.name.includes('Google') ||
+                v.name.includes('Samantha') ||
+                v.name.includes('Female'))
+          ) || voices.find((v) => v.lang.startsWith('en'));
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        const cleanupTTS = () => {
+          if (ttsWatchdogRef.current) {
+            clearTimeout(ttsWatchdogRef.current);
+            ttsWatchdogRef.current = null;
+          }
+          currentUtteranceRef.current = null;
+          isSpeakingRef.current = false;
+        };
+
+        const handleSpeechFinished = () => {
+          cleanupTTS();
+          if (onComplete) onComplete();
+
+          // AUTOMATIC RETURN TO LISTENING in continuous voice session
+          if (isVoiceModeActiveRef.current) {
+            setAiState('listening');
+            safeResumeListening();
+          } else {
+            setAiState('idle');
+          }
+        };
+
+        utterance.onend = handleSpeechFinished;
+
+        utterance.onerror = (e) => {
+          console.warn('[FRIDAY Voice] Speech synthesis event notice:', e.error);
+          handleSpeechFinished();
+        };
+
+        // Safety Watchdog: If browser background-throttles speech onend, auto-recover
+        const estimatedDurationMs = Math.max(2500, textToSpeak.length * 90 + 2000);
+        ttsWatchdogRef.current = setTimeout(() => {
+          if (isSpeakingRef.current) {
+            console.warn('[FRIDAY Voice] TTS watchdog triggered fallback to listening');
+            window.speechSynthesis.cancel();
+            handleSpeechFinished();
+          }
+        }, estimatedDurationMs);
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error('[FRIDAY Voice] Speech synthesis error:', err);
+        isSpeakingRef.current = false;
+        if (isVoiceModeActiveRef.current) {
+          safeResumeListening();
+        } else {
+          setAiState('idle');
+        }
+        if (onComplete) onComplete();
+      }
+    },
+    [safePauseRecognition, safeResumeListening, setAiState]
+  );
+
+  // Full command execution pipeline: Transcript -> Backend API -> Task HUD -> Spoken Response -> Resume Listening
+  const handleFinalVoiceCommand = useCallback(
+    async (commandText) => {
+      const cleanText = commandText.trim();
+      if (!cleanText || cleanText.length < 2) return;
+
+      if (hasDispatchedCurrentUtteranceRef.current) return;
+      hasDispatchedCurrentUtteranceRef.current = true;
+
+      // 1. Transition to processing
+      isProcessingRef.current = true;
+      safePauseRecognition();
+      setAiState('processing');
+
+      try {
+        // 2. Dispatch command to backend
+        const result = await FridayApiClient.submitCommand(cleanText);
+
+        if (result && result.response_text) {
+          // Spawn any tasks generated by AI Orchestrator in floating HUD
+          if (Array.isArray(result.tasks_spawned) && result.tasks_spawned.length > 0) {
+            result.tasks_spawned.forEach((task) => {
+              if (onTaskSpawned) {
+                onTaskSpawned(task);
+              }
+            });
+          }
+
+          if (onCommandProcessed) {
+            onCommandProcessed(result);
+          }
+
+          // 3. Audibly speak the verified response
+          const spokenText = result.spoken_response || result.response_text;
+          speakResponse(spokenText, () => {
+            isProcessingRef.current = false;
+            hasDispatchedCurrentUtteranceRef.current = false;
+          });
+        } else {
+          // Fallback if backend temporarily unavailable
+          const fallbackText = `Instruction received: "${cleanText}". System operational.`;
+          speakResponse(fallbackText, () => {
+            isProcessingRef.current = false;
+            hasDispatchedCurrentUtteranceRef.current = false;
+          });
+        }
+      } catch (err) {
+        console.error('[FRIDAY Voice] Command processing error:', err);
+        speakResponse('I encountered an error synchronizing with the neural engine.', () => {
+          isProcessingRef.current = false;
+          hasDispatchedCurrentUtteranceRef.current = false;
+        });
+      }
+    },
+    [safePauseRecognition, speakResponse, onTaskSpawned, onCommandProcessed, setAiState]
+  );
 
   // Initialize SpeechRecognition instance
   useEffect(() => {
@@ -33,8 +242,8 @@ export function useVoiceAssistant({
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.continuous = false; // Capture discrete voice commands
-      recognition.interimResults = true; // Show fast live feedback
+      recognition.continuous = false; // Discrete captures with automatic lifecycle chaining
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
 
@@ -63,34 +272,54 @@ export function useVoiceAssistant({
           setLastTranscript(currentText);
         }
 
-        if (finalTranscript.trim() && !isProcessingRef.current) {
+        if (finalTranscript.trim() && !isProcessingRef.current && !isSpeakingRef.current) {
           handleFinalVoiceCommand(finalTranscript.trim());
         }
       };
 
       recognition.onerror = (event) => {
-        console.warn('[FRIDAY Voice] Speech recognition event error:', event.error);
         isListeningRef.current = false;
 
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          console.warn('[FRIDAY Voice] Microphone permission denied');
           setMicPermission('denied');
-          setVoiceError('Microphone access denied. Please allow microphone permissions in browser.');
+          setIsVoiceModeActive(false);
+          isVoiceModeActiveRef.current = false;
+          setVoiceError('Microphone permission denied. Please allow microphone in browser.');
           setAiState('idle');
         } else if (event.error === 'no-speech') {
-          // Timeout without speech, gracefully return to idle
-          setAiState('idle');
+          // Silence timeout: auto-restart if voice mode is still active
+          if (isVoiceModeActiveRef.current && !isSpeakingRef.current && !isProcessingRef.current) {
+            safeResumeListening();
+          } else if (!isVoiceModeActiveRef.current) {
+            setAiState('idle');
+          }
+        } else if (event.error === 'aborted') {
+          // Intentional abort (e.g. during TTS speech), ignore
         } else if (event.error === 'network') {
-          setVoiceError('Speech recognition network error.');
-          setAiState('idle');
+          console.warn('[FRIDAY Voice] Speech network error');
+          setVoiceError('Speech network connection interrupted.');
+          if (isVoiceModeActiveRef.current) {
+            safeResumeListening();
+          } else {
+            setAiState('idle');
+          }
         } else {
-          setAiState('idle');
+          if (isVoiceModeActiveRef.current && !isSpeakingRef.current && !isProcessingRef.current) {
+            safeResumeListening();
+          } else {
+            setAiState('idle');
+          }
         }
       };
 
       recognition.onend = () => {
         isListeningRef.current = false;
-        // If not processing and not speaking, return to idle
-        if (!isProcessingRef.current && aiState === 'listening') {
+
+        // In continuous voice mode: if not speaking and not processing, resume listening automatically!
+        if (isVoiceModeActiveRef.current && !isSpeakingRef.current && !isProcessingRef.current) {
+          safeResumeListening();
+        } else if (!isVoiceModeActiveRef.current && !isSpeakingRef.current && !isProcessingRef.current) {
           setAiState('idle');
         }
       };
@@ -102,176 +331,85 @@ export function useVoiceAssistant({
     }
 
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {}
-      }
-      if (synthRef.current) {
-        synthRef.current.cancel();
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+      if (ttsWatchdogRef.current) clearTimeout(ttsWatchdogRef.current);
+      safePauseRecognition();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
     };
-  }, []);
+  }, [handleFinalVoiceCommand, safePauseRecognition, safeResumeListening, setAiState]);
 
-  // Speak assistant response audibly using Web Speech Synthesis
-  const speakResponse = useCallback((textToSpeak, onComplete) => {
-    if (!synthRef.current || !textToSpeak) {
-      setAiState('idle');
-      if (onComplete) onComplete();
-      return;
-    }
-
-    try {
-      synthRef.current.cancel(); // Cancel any existing speaking audio
-
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      currentUtteranceRef.current = utterance;
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-
-      // Select natural English voice if available
-      const voices = synthRef.current.getVoices();
-      const preferredVoice =
-        voices.find((v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Female'))) ||
-        voices.find((v) => v.lang.startsWith('en'));
-
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-
-      utterance.onstart = () => {
-        setAiState('speaking');
-      };
-
-      utterance.onend = () => {
-        currentUtteranceRef.current = null;
-        setAiState('idle');
-        if (onComplete) onComplete();
-      };
-
-      utterance.onerror = (e) => {
-        console.warn('[FRIDAY Voice] Speech synthesis error:', e);
-        currentUtteranceRef.current = null;
-        setAiState('idle');
-        if (onComplete) onComplete();
-      };
-
-      synthRef.current.speak(utterance);
-    } catch (err) {
-      console.error('[FRIDAY Voice] Speech synthesis exception:', err);
-      setAiState('idle');
-      if (onComplete) onComplete();
-    }
-  }, [setAiState]);
-
-  // Execute full NLP command cycle
-  const handleFinalVoiceCommand = useCallback(
-    async (commandText) => {
-      isProcessingRef.current = true;
-      setAiState('processing');
-
-      try {
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.stop();
-          } catch {}
-        }
-
-        // 1. Submit command to backend
-        const result = await FridayApiClient.submitCommand(commandText);
-
-        if (result && result.response_text) {
-          // Spawn any tasks created by AI Orchestrator
-          if (Array.isArray(result.tasks_spawned) && result.tasks_spawned.length > 0) {
-            result.tasks_spawned.forEach((task) => {
-              if (onTaskSpawned) {
-                onTaskSpawned(task);
-              }
-            });
-          }
-
-          if (onCommandProcessed) {
-            onCommandProcessed(result);
-          }
-
-          // 2. Speak the response
-          const spokenText = result.spoken_response || result.response_text;
-          speakResponse(spokenText, () => {
-            isProcessingRef.current = false;
-          });
-        } else {
-          // Fallback if backend unavailable
-          const fallbackText = `Acknowledged. Processed instruction: "${commandText}".`;
-          speakResponse(fallbackText, () => {
-            isProcessingRef.current = false;
-          });
-        }
-      } catch (err) {
-        console.error('[FRIDAY Voice] Error processing command:', err);
-        speakResponse('I encountered a synchronization error while processing your instruction.', () => {
-          isProcessingRef.current = false;
-        });
-      }
-    },
-    [onTaskSpawned, onCommandProcessed, setAiState, speakResponse]
-  );
-
-  // Trigger voice listening
+  // Start continuous voice session
   const startListening = useCallback(() => {
     if (!recognitionRef.current) {
-      // Fallback message if speech recognition not supported
-      setVoiceError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      setVoiceError('Speech recognition is not supported in this browser.');
       return;
     }
 
-    if (synthRef.current) {
-      synthRef.current.cancel(); // Stop talking if user interrupts
+    // Barge-in: if currently speaking, stop TTS immediately
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
+    isSpeakingRef.current = false;
+    isProcessingRef.current = false;
+    hasDispatchedCurrentUtteranceRef.current = false;
 
-    if (isListeningRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-      isListeningRef.current = false;
-      setAiState('idle');
-      return;
-    }
+    setIsVoiceModeActive(true);
+    isVoiceModeActiveRef.current = true;
+    setVoiceError(null);
 
     try {
-      setVoiceError(null);
-      isProcessingRef.current = false;
       recognitionRef.current.start();
-    } catch (e) {
-      console.warn('[FRIDAY Voice] recognition.start() error:', e);
-      // If already started, stop and reset
-      try {
-        recognitionRef.current.stop();
-      } catch {}
+      isListeningRef.current = true;
+      setAiState('listening');
+    } catch (err) {
+      if (err.name === 'InvalidStateError') {
+        isListeningRef.current = true;
+        setAiState('listening');
+      } else {
+        console.warn('[FRIDAY Voice] recognition.start() notice:', err.message);
+      }
     }
   }, [setAiState]);
 
+  // Stop continuous voice session
   const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListeningRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
+    setIsVoiceModeActive(false);
+    isVoiceModeActiveRef.current = false;
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    if (ttsWatchdogRef.current) clearTimeout(ttsWatchdogRef.current);
+
+    safePauseRecognition();
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
-    if (synthRef.current) {
-      synthRef.current.cancel();
-    }
-    isListeningRef.current = false;
+
+    isSpeakingRef.current = false;
     isProcessingRef.current = false;
+    hasDispatchedCurrentUtteranceRef.current = false;
     setAiState('idle');
-  }, [setAiState]);
+  }, [safePauseRecognition, setAiState]);
+
+  // Toggle voice session
+  const toggleListening = useCallback(() => {
+    if (isVoiceModeActiveRef.current || isListeningRef.current || aiState === 'listening') {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [aiState, startListening, stopListening]);
 
   return {
     isSupported,
     micPermission,
     lastTranscript,
     voiceError,
+    isVoiceModeActive,
     startListening,
     stopListening,
+    toggleListening,
     speakResponse,
     executeCommand: handleFinalVoiceCommand
   };

@@ -25,8 +25,10 @@ function App() {
     isVoiceSupported,
     micPermission,
     voiceError,
+    isVoiceModeActive,
     startListening,
-    stopListening
+    stopListening,
+    toggleListening
   } = useFridayState();
 
   const {
@@ -103,7 +105,8 @@ function App() {
         errorMessage={cameraErrorMessage || voiceError}
         onToggleCamera={handleToggleCamera}
         micPermission={micPermission}
-        onToggleVoice={startListening}
+        isVoiceModeActive={isVoiceModeActive}
+        onToggleVoice={toggleListening}
       />
     </main>
   );
